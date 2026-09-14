@@ -1,0 +1,65 @@
+// ============================================================================
+// UNIT 8 — COMMUNICATION
+// ============================================================================
+// University-wide and scoped announcements. Both models use a `scope` enum
+// plus optional foreign keys so the same table can represent a
+// university-wide notice or a single section's notice without needing
+// separate tables per scope level.
+// ============================================================================
+
+/// A notice published at a University/Faculty/Department/Section scope.
+/// The service layer must ensure exactly the ID matching `scope` is
+/// populated — e.g. UNIVERSITY → none set, FACULTY → facultyId set,
+/// SECTION → sectionId set.
+model Notice {
+  id           String      @id @default(uuid())
+  title        String
+  content      String
+  scope        NoticeScope
+  facultyId    String?
+  departmentId String?
+  sectionId    String?
+  createdById  String
+  isPublished  Boolean     @default(false)
+  publishedAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  faculty    Faculty?    @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  section    Section?    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  createdBy  User        @relation("NoticeCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([scope])
+  @@index([facultyId])
+  @@index([departmentId])
+  @@index([sectionId])
+  @@map("notices")
+}
+
+/// A university event, scoped like Notice but without a Section level
+/// (events are organized at University/Faculty/Department granularity).
+model Event {
+  id           String     @id @default(uuid())
+  title        String
+  description  String?
+  scope        EventScope
+  startAt      DateTime
+  endAt        DateTime?
+  location     String?
+  facultyId    String?
+  departmentId String?
+  createdById  String
+  isPublished  Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  faculty    Faculty?    @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy  User        @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([scope])
+  @@index([facultyId])
+  @@index([departmentId])
+  @@map("events")
+}

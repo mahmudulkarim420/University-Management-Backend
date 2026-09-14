@@ -1,0 +1,185 @@
+// ============================================================================
+// UNIT 6 — STUDENT ACADEMICS
+// ============================================================================
+// Everything a student does inside a Section: enroll, attend, submit
+// assignments, sit exams, and receive grades/results. All FKs to a student
+// point at StudentProfile.id (Unit 2), never directly at User.id, so this
+// history survives even if the user's identity fields change.
+// ============================================================================
+
+/// A student's request/membership in a Section — a many-to-many
+/// student↔section relation carried through an approval workflow.
+model StudentEnrollment {
+  id           String           @id @default(uuid())
+  studentId    String
+  sectionId    String
+  status       EnrollmentStatus @default(PENDING)
+  requestedAt  DateTime         @default(now())
+  approvedAt   DateTime?
+  /// The DEPARTMENT_HEAD/ADMIN who approved or rejected this request.
+  /// A student can never set their own status to APPROVED.
+  approvedById String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section    Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  approvedBy User?          @relation("EnrollmentApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  // A student can only have one enrollment row per section.
+  @@unique([studentId, sectionId])
+  @@index([studentId])
+  @@index([sectionId])
+  @@map("student_enrollments")
+}
+
+/// A single day's attendance record for a student in a Section.
+model Attendance {
+  id         String           @id @default(uuid())
+  studentId  String
+  sectionId  String
+  date       DateTime
+  status     AttendanceStatus
+  /// The instructor who marked this attendance record — must be assigned
+  /// to the section via CourseInstructor (Unit 4), enforced in the
+  /// service layer.
+  markedById String
+  remarks    String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  student  StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section  Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  markedBy User           @relation("AttendanceMarkedBy", fields: [markedById], references: [id], onDelete: Restrict)
+
+  // Prevents duplicate attendance rows for the same student/section/day.
+  @@unique([studentId, sectionId, date])
+  @@index([studentId])
+  @@index([sectionId])
+  @@index([date])
+  @@map("attendance")
+}
+
+/// An assignment created by an instructor for a Section.
+model Assignment {
+  id          String           @id @default(uuid())
+  sectionId   String
+  createdById String
+  title       String
+  description String?
+  dueDate     DateTime
+  totalMarks  Int
+  status      AssignmentStatus @default(DRAFT)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("AssignmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  submissions AssignmentSubmission[]
+
+  @@index([sectionId])
+  @@index([createdById])
+  @@map("assignments")
+}
+
+/// A student's submission for an Assignment.
+model AssignmentSubmission {
+  id           String           @id @default(uuid())
+  assignmentId String
+  studentId    String
+  submittedAt  DateTime         @default(now())
+  /// At least one of contentUrl/contentText is expected in practice
+  /// (a file link or inline text answer).
+  contentUrl   String?
+  contentText  String?
+  marks        Int?
+  feedback     String?
+  status       SubmissionStatus @default(SUBMITTED)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  assignment Assignment     @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // One submission row per student per assignment. A resubmission
+  // updates this same row rather than creating a new one.
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
+  @@map("assignment_submissions")
+}
+
+/// An exam scheduled for a Section (quiz, midterm, final, etc.).
+model Exam {
+  id          String   @id @default(uuid())
+  sectionId   String
+  title       String
+  examType    ExamType
+  examDate    DateTime
+  totalMarks  Int
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("ExamCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  grades Grade[]
+
+  @@index([sectionId])
+  @@index([createdById])
+  @@map("exams")
+}
+
+/// A student's marks for one Exam.
+model Grade {
+  id          String   @id @default(uuid())
+  examId      String
+  studentId   String
+  marks       Float
+  gradeLetter String?
+  gradePoint  Float?
+  remarks     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exam    Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, studentId])
+  @@index([studentId])
+  @@map("grades")
+}
+
+/// A student's final result for a Section, carried through an approval
+/// workflow: INSTRUCTOR submits → DEPARTMENT_HEAD approves/rejects →
+/// PUBLISHED → STUDENT reads. `submittedById` and `approvedById` are
+/// deliberately separate fields so the same person can never fill both
+/// roles for one Result row (separation of duties).
+model Result {
+  id            String       @id @default(uuid())
+  studentId     String
+  sectionId     String
+  totalMarks    Float?
+  gradeLetter   String?
+  gradePoint    Float?
+  status        ResultStatus @default(DRAFT)
+  submittedById String?
+  submittedAt   DateTime?
+  approvedById  String?
+  approvedAt    DateTime?
+  publishedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  section     Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  submittedBy User?          @relation("ResultSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  approvedBy  User?          @relation("ResultApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, sectionId])
+  @@index([studentId])
+  @@index([sectionId])
+  @@index([status])
+  @@map("results")
+}

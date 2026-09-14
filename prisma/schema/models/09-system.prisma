@@ -1,0 +1,60 @@
+// ============================================================================
+// UNIT 9 — SYSTEM
+// ============================================================================
+// Platform-level tables: an immutable audit trail and global configuration.
+// Neither table participates in academic or financial business logic —
+// they exist purely to support security, compliance, and ops.
+// ============================================================================
+
+/// Immutable, append-only record of security- and business-sensitive
+/// actions across the whole system. Never write password, token, or
+/// secret values into `metadata`. No `updatedAt` on purpose — audit rows
+/// are write-once and must never be edited after creation.
+model AuditLog {
+  id           String      @id @default(uuid())
+  /// Nullable + SetNull on delete: an audit entry must survive even if the
+  /// actor's User account is later removed.
+  actorId      String?
+  action       AuditAction
+  /// Free-text name of the resource type affected (e.g. "Result",
+  /// "Payment") — kept as a plain string rather than an enum so new
+  /// resource types never require a migration just to be logged.
+  resourceType String
+  resourceId   String?
+  /// Correlates this entry with a specific HTTP request/trace for
+  /// debugging and incident review.
+  requestId    String?
+  ipAddress    String?
+  userAgent    String?
+  /// Free-form structured context. Must never contain secrets.
+  metadata     Json?
+  result       AuditResult @default(SUCCESS)
+  createdAt    DateTime    @default(now())
+
+  actor User? @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// Global application configuration, keyed by a unique string. This is for
+/// ordinary/public-ish app configuration only — never store secrets here;
+/// use a dedicated secrets manager for those.
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  /// Whether this setting is safe to expose to non-privileged
+  /// roles/clients (e.g. a feature flag) versus admin-only configuration.
+  isPublic    Boolean  @default(false)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  updatedBy User? @relation("SystemSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("system_settings")
+}

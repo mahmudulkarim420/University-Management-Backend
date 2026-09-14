@@ -1,0 +1,105 @@
+// ============================================================================
+// UNIT 5 — ACADEMIC DELIVERY
+// ============================================================================
+// The "when/where a course runs" layer: AcademicSession (year) → Semester
+// (term) → Section (a specific run of a Course in a Semester) →
+// ClassSchedule (its weekly time slots). Students enroll into Sections,
+// not Courses directly — see Unit 6.
+// ============================================================================
+
+/// A university academic year (e.g. "2026-2027"), containing one or more
+/// Semesters.
+model AcademicSession {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  /// Marks the session currently in progress — the application should
+  /// keep exactly one session flagged true at a time.
+  isCurrent Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  semesters Semester[]
+
+  @@map("academic_sessions")
+}
+
+/// A term within an AcademicSession (e.g. "Spring 2026").
+model Semester {
+  id                String       @id @default(uuid())
+  academicSessionId String
+  name              String
+  term              SemesterTerm
+  startDate         DateTime
+  endDate           DateTime
+  isCurrent         Boolean      @default(false)
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Restrict)
+
+  sections Section[]
+
+  @@index([academicSessionId])
+  @@map("semesters")
+}
+
+/// A specific offering of a Course within a Semester — what students
+/// actually enroll in and what instructors, attendance, assignments,
+/// exams, and results are all recorded against.
+model Section {
+  id         String   @id @default(uuid())
+  courseId   String
+  semesterId String
+  /// Short label distinguishing parallel sections of the same course in
+  /// the same semester (e.g. "A", "B").
+  code       String
+  name       String?
+  capacity   Int?
+  room       String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  semester Semester @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+
+  classSchedules ClassSchedule[]
+  enrollments    StudentEnrollment[]
+  attendance     Attendance[]
+  assignments    Assignment[]
+  exams          Exam[]
+  results        Result[]
+  notices        Notice[]
+
+  // One section code per course per semester — prevents duplicate "Section A"
+  // rows for the same course/semester pair.
+  @@unique([courseId, semesterId, code])
+  @@index([courseId])
+  @@index([semesterId])
+  @@map("sections")
+}
+
+/// A recurring weekly class time slot for a Section.
+model ClassSchedule {
+  id           String    @id @default(uuid())
+  sectionId    String
+  instructorId String
+  dayOfWeek    DayOfWeek
+  startTime    DateTime
+  endTime      DateTime
+  room         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  section    Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  instructor User    @relation("InstructorClassSchedules", fields: [instructorId], references: [id], onDelete: Restrict)
+
+  @@index([sectionId])
+  @@index([instructorId])
+  @@map("class_schedules")
+}

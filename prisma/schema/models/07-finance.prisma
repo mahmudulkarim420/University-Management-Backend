@@ -1,0 +1,119 @@
+// ============================================================================
+// UNIT 7 — FINANCE
+// ============================================================================
+// Billing and payment tables, isolated from academic authority (no relation
+// here touches grades, attendance, or course data — ACCOUNTANT users should
+// never need write access outside this unit). All monetary columns use
+// `Decimal @db.Decimal(12, 2)` — never Float or String — per the project's
+// explicit money-handling rule (a prior bug came from storing amount as a
+// string).
+// ============================================================================
+
+/// A billable charge issued to a student.
+model Invoice {
+  id            String        @id @default(uuid())
+  studentId     String
+  invoiceNumber String        @unique
+  description   String?
+  amount        Decimal       @db.Decimal(12, 2)
+  dueDate       DateTime
+  status        InvoiceStatus @default(UNPAID)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  payments     Payment[]
+  transactions FinancialTransaction[]
+
+  @@index([studentId])
+  @@index([status])
+  @@map("invoices")
+}
+
+/// A payment made by a student against an Invoice. Status must be driven
+/// by verified gateway/webhook data, never trusted directly from the
+/// client — a student can create a payment but can never set
+/// `verifiedById`/`status = SUCCESS` themselves.
+model Payment {
+  id            String         @id @default(uuid())
+  invoiceId     String
+  studentId     String
+  amount        Decimal        @db.Decimal(12, 2)
+  method        PaymentMethod?
+  gateway       PaymentGateway?
+  /// Payment gateway's own reference — used to reconcile without trusting
+  /// client-supplied status.
+  transactionId String?        @unique
+  status        PaymentStatus  @default(PENDING)
+
+  // payment gateway
+  gatewaySessionId       String?
+  gatewayPaymentIntentId String?
+  getewayRowData         Json?
+  /// The ACCOUNTANT who verified/reconciled this payment.
+  verifiedById           String?
+  verifiedAt             DateTime?
+  paidAt                 DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  invoice    Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  verifiedBy User?          @relation("PaymentVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  transactions FinancialTransaction[]
+
+  @@index([gateway])
+  @@index([invoiceId])
+  @@index([studentId])
+  @@index([status])
+  @@map("payments")
+}
+
+/// A scholarship award applied to a student's account.
+model Scholarship {
+  id           String            @id @default(uuid())
+  studentId    String
+  name         String
+  amount       Decimal           @db.Decimal(12, 2)
+  status       ScholarshipStatus @default(APPLIED)
+  appliedAt    DateTime          @default(now())
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  approvedBy User?          @relation("ScholarshipApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@map("scholarships")
+}
+
+/// Append-only financial ledger. Never delete or edit rows here —
+/// corrections must be modeled as new ADJUSTMENT/REFUND rows, not
+/// mutations of history. No `updatedAt` on purpose: this table is
+/// write-once.
+model FinancialTransaction {
+  id          String                   @id @default(uuid())
+  studentId   String
+  invoiceId   String?
+  paymentId   String?
+  type        FinancialTransactionType
+  amount      Decimal                  @db.Decimal(12, 2)
+  reference   String?
+  description String?
+  createdById String?
+  createdAt   DateTime                 @default(now())
+
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  invoice   Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  payment   Payment?       @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdBy User?          @relation("TransactionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@map("financial_transactions")
+}

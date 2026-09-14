@@ -1,0 +1,82 @@
+// ============================================================================
+// UNIT 4 — ACADEMIC CATALOG
+// ============================================================================
+// The reusable "what can be taught" layer: Subject (definition) → Course
+// (a subject offered under a department/program) → CourseInstructor (who
+// teaches it). Delivery — when/where a course actually runs — is Unit 5.
+// ============================================================================
+
+/// A reusable academic subject definition (e.g. "CSE101 — Introduction to
+/// Programming"), independent of which department/program currently offers
+/// it. Kept separate from Course so the same subject can be reused across
+/// multiple course offerings without duplicating its definition.
+model Subject {
+  id          String      @id @default(uuid())
+  code        String      @unique
+  title       String
+  description String?
+  subjectType SubjectType @default(CORE)
+  credit      Int
+  isActive    Boolean     @default(true)
+  isDeleted   Boolean     @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  courses Course[]
+
+  @@map("subjects")
+}
+
+/// A Subject as offered under a specific Department/Program. This is what
+/// students enroll in (through Section, Unit 5) and instructors are
+/// assigned to (through CourseInstructor below).
+model Course {
+  id           String    @id @default(uuid())
+  departmentId String
+  programId    String
+  subjectId    String
+  code         String    @unique
+  title        String
+  description  String?
+  credit       Int
+  level        Int?
+  isActive     Boolean   @default(true)
+  isDeleted    Boolean   @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  program    Program    @relation(fields: [programId], references: [id], onDelete: Restrict)
+  subject    Subject    @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  instructors CourseInstructor[]
+  sections    Section[]
+
+  @@index([departmentId])
+  @@index([programId])
+  @@index([subjectId])
+  @@map("courses")
+}
+
+/// Many-to-many join between Course and instructor (User). This table is
+/// the single source of truth for instructor authorization: an instructor
+/// may act on a course/section only if a row exists here for them — the
+/// backend must always check this before allowing attendance, grading,
+/// or result-submission actions.
+model CourseInstructor {
+  courseId     String
+  instructorId String
+  /// Marks the lead instructor when a course has multiple assigned
+  /// instructors (e.g. for co-teaching or lab sections).
+  isPrimary    Boolean  @default(false)
+  assignedAt   DateTime @default(now())
+
+  course     Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  instructor User   @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, instructorId])
+  @@index([instructorId])
+  @@map("course_instructors")
+}

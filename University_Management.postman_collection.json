@@ -1,0 +1,859 @@
+{
+  "info": {
+    "_postman_id": "428b3603-395a-45cb-b44a-16569397afde",
+    "name": "University Management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54899989",
+    "_collection_link": "https://go.postman.co/collection/54899989-428b3603-395a-45cb-b44a-16569397afde?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "",
+                  "pm.test(\"registers with 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "if (res && res.data && res.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", res.data.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", res.data.refreshToken || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Student 1\",\n    \"email\": \"student1@gmail.com\",\n    \"password\": \"Student@12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Expected: **201**. In one Prisma transaction this creates a `User` (`role: PATIENT`, `status: ACTIVE`, `emailVerified: false`, `authProvider: CREDENTIALS`, bcrypt-hashed password) and its matching `Patient` row.\n\nReturns `data: { accessToken, refreshToken, user, patient }`, and also sets both tokens as cookies. The test script stores the tokens in collection variables for the protected requests below.\n\nThere is no email verification step — the OTP/verify-email/forget-password/reset-password flows went away with better-auth."
+          },
+          "response": []
+        },
+        {
+          "name": "Credential Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "",
+                  "pm.test(\"logs in with 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "if (res && res.data && res.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", res.data.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", res.data.refreshToken || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"superadmin@gmail.com\",\n    \"password\": \"Super@admin12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Expected: 200 with `data: { accessToken, refreshToken, user }`.\n\nOther outcomes from `AuthService.loginUser`:\n\n- unknown email → 404 \"User not found\"\n- `status: BLOCKED` → 403 \"User is blocked\"\n- `isDeleted` or `status: DELETED` → 404 \"User is deleted\"\n- account with no password (Google-only sign-in) → 400 \"This account uses Google sign-in. Please continue with Google.\"\n- wrong password → 401 \"Invalid credentials\""
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"paxocor468@mediseat.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/auth/forgot-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"paxocor468@mediseat.com\",\n    \"newPassword\": \"Student@12345\",\n    \"otp\" : \"705430\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/auth/reset-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Google Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "",
+                  "pm.test(\"logs in with Google\", () => pm.response.to.have.status(200));",
+                  "",
+                  "if (res && res.data && res.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", res.data.accessToken);",
+                  "    pm.collectionVariables.set(\"refreshToken\", res.data.refreshToken || \"\");",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"idToken\": \"{{supabase_service_role_api_key_18pn}}sudR1FAO5GgNcF9dp24J49VkMfkWtkpxRau_srZA6jCEVj896Vhe5PVaHw8oeHh5oWg8Rets9lhvkBuxxa8Zq-LODS0I9mLgbpyYKKthvOa3sl9mGTvquvbfGWYmwMxF3DHDxxzjxGkVFMZxF3-Yi585XE38cMy1kMHn8JQTF7NhFQ67EJAp78q27JFgZjiQ_ybbG4X9k31lG6zb9pZL2KNLLBlGgg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/auth/google",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "google"
+              ]
+            },
+            "description": "Expected: 200, returning the application's own `accessToken` / `refreshToken` (both in the body and as cookies).\n\nThree resolution paths, in order:\n1. **Known `googleId`** — resolved by the stable `sub` claim, never by email, because a Google email can change and `sub` cannot.\n2. **Matching email on an existing account** — links it: sets `googleId`, forces `emailVerified: true`, and flips `authProvider` to `GOOGLE` *only* if the account had no password. An existing password is preserved. Role and status always come from the database, never from Google.\n3. **New email** — provisions `User` (`role: PATIENT`, `password: null`, `authProvider: GOOGLE`, `emailVerified: true`, `image` from the `picture` claim) plus its `Patient` row in one transaction.\n\nAccount standing is checked on every path, including before the link-write, so a blocked or deleted account is refused without being mutated."
+          },
+          "response": []
+        },
+        {
+          "name": "refresh-token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/v1/auth/refresh-token",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh-token"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "All seven endpoints under `/api/v1/auth`. Protected routes (`/me`, `/change-password`, `/logout`) are gated by `checkAuth(ADMIN, DOCTOR, PATIENT, SUPER_ADMIN)` — every role passes, so the gate is really just \"authenticated\"."
+    },
+    {
+      "name": "Profiles",
+      "item": [
+        {
+          "name": "student-profile",
+          "item": [
+            {
+              "name": "create profile",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"studentId\": \"STU-2026-0001\",\r\n//   \"programId\": \"8c9f7b2a-1234-4567-89ab-123456789abc\",\r\n  \"admissionDate\": \"2026-09-01T00:00:00.000Z\",\r\n  \"dateOfBirth\": \"2004-05-15T00:00:00.000Z\",\r\n  \"gender\": \"MALE\",\r\n  \"phone\": \"017XXXXXXXX\",\r\n  \"address\": \"Feni, Bangladesh\",\r\n  \"bloodGroup\": \"O+\",\r\n  \"guardianName\": \"John Doe\",\r\n  \"guardianPhone\": \"018XXXXXXXX\",\r\n  \"academicStatus\": \"ACTIVE\",\r\n  \"currentSemesterNo\": 1\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/profiles/student/create-profile",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "profiles",
+                    "student",
+                    "create-profile"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "getMe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/v1/auth/me",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "finance",
+      "item": [
+        {
+          "name": "invoices",
+          "item": [
+            {
+              "name": "Create Invoice",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n\t\"studentId\": \"f0a66206-7d80-43f8-b9ee-dbb04287c21c\",\r\n    \"description\": \"Examination Fee\",\r\n    \"amount\": \"6750.00\",\r\n    \"dueDate\": \"2026-11-15T00:00:00.000Z\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/finance/invoices/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "finance",
+                    "invoices",
+                    "create"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "payments",
+          "item": [
+            {
+              "name": "create payments intent",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "\r\n{\r\n  \"invoiceId\": \"0efc7afd-1295-4c71-88e0-01fd18417935\",\r\n  \"method\": \"CARD\",\r\n  \"gateway\": \"STRIPE\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/finance/payments/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "finance",
+                    "payments",
+                    "create"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Payment Veryfy by Webhook",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/finance/payments/webhook/stripe-verify",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "finance",
+                    "payments",
+                    "webhook",
+                    "stripe-verify"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "organization",
+      "item": [
+        {
+          "name": "departments",
+          "item": [
+            {
+              "name": "create departments by Super Admin and Admin",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "  {\r\n    \"facultyId\": \"36accf5e-9e1a-4734-9bcc-09578157b962\",\r\n    \"code\": \"MAT\",\r\n    \"name\": \"Department of Mathematics\",\r\n    \"description\": \"The Department of Mathematics provides undergraduate and postgraduate education in pure mathematics, applied mathematics, statistics, mathematical modeling, and related disciplines.\"\r\n }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/organization/departments/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "organization",
+                    "departments",
+                    "create"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update departments by Super Admin and Admin",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"facultyId\": \"57c09f1d-2de1-40e4-98cf-52942726f601\",\r\n  \"code\": \"CSE\",\r\n  \"name\": \"Department of Computer Science and Engineering updated\",\r\n  \"description\": \"The Department of Computer Science and Engineering offers undergraduate and postgraduate programs in computer science and related fields.\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/organization/departments/e7a51155-4c98-40ef-be56-b9f33552c228",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "organization",
+                    "departments",
+                    "e7a51155-4c98-40ef-be56-b9f33552c228"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get all departments (public)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/organization/departments/all",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "organization",
+                    "departments",
+                    "all"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "faculties",
+          "item": [
+            {
+              "name": "Create Faculty by SUPER_ADMIN",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "  {\r\n    \"code\": \"FSE\",\r\n    \"name\": \"Faculty of Science and Engineering\",\r\n    \"description\": \"Faculty responsible for science and engineering programs\"\r\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/organization/faculties/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "organization",
+                    "faculties",
+                    "create"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get all Faculty (public)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/organization/faculties/all",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "organization",
+                    "faculties",
+                    "all"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "programs",
+          "item": [
+            {
+              "name": "create programs by Super Admin and Admin",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "  {\r\n    \"departmentId\": \"04d6adb3-e538-4a93-9062-8f13f223640a\",\r\n    \"code\": \"CSE-ML-MSC\",\r\n    \"name\": \"Master of Science in Machine Learning\",\r\n    \"degreeType\": \"MASTER\",\r\n    \"durationYears\": 2,\r\n    \"totalCredits\": 36,\r\n    \"description\": \"An advanced graduate program focusing on machine learning algorithms, deep learning, statistical modeling, artificial intelligence, and applied research.\"\r\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/organization/programs/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "organization",
+                    "programs",
+                    "create"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update programs by Super Admin and Admin",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "  {\r\n    \"departmentId\": \"04d6adb3-e538-4a93-9062-8f13f223640a\",\r\n    \"code\": \"CSE-ML-MSC\",\r\n    \"name\": \"Update: Master of Science in Machine Learning\",\r\n    \"degreeType\": \"MASTER\",\r\n    \"durationYears\": 2,\r\n    \"totalCredits\": 36,\r\n    \"description\": \"Update: An advanced graduate program focusing on machine learning algorithms, deep learning, statistical modeling, artificial intelligence, and applied research.\"\r\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/organization/programs/update/a4625b87-82f4-42c1-a3a6-7cc902dbcd0e",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "organization",
+                    "programs",
+                    "update",
+                    "a4625b87-82f4-42c1-a3a6-7cc902dbcd0e"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get programs (public)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/organization/programs/all",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "organization",
+                    "programs",
+                    "all"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "academic-catalog",
+      "item": [
+        {
+          "name": "subjects",
+          "item": [
+            {
+              "name": "create subject by super admin, admin, department head",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "  {\r\n    \"code\": \"CSE110\",\r\n    \"title\": \"Computer Graphics\",\r\n    \"description\": \"Fundamentals of computer graphics including 2D and 3D transformations, rendering, and visualization.\",\r\n    \"subjectType\": \"ELECTIVE\",\r\n    \"credit\": 3\r\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/academic-catalog/subjects/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "academic-catalog",
+                    "subjects",
+                    "create"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "courses",
+          "item": [
+            {
+              "name": "create course by super admin, admin, department head",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "  {\r\n    \"departmentId\": \"04d6adb3-e538-4a93-9062-8f13f223640a\",\r\n    \"programId\": \"12b8e50e-289f-42ae-b30f-5f297e3f2a2d\",\r\n    \"subjectId\": \"29eeddea-dee9-43cc-b9f4-eee1d7750736\",\r\n    \"code\": \"CSE-105\",\r\n    \"title\": \"Computer Networks\",\r\n    \"description\": \"This course provides an introduction to computer networking, network architectures, protocols, routing, switching, and network security fundamentals.\",\r\n    \"credit\": 3,\r\n    \"level\": 3,\r\n    \"isActive\": true\r\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/academic-catalog/courses/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "academic-catalog",
+                    "courses",
+                    "create"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "course-instructors",
+          "item": [
+            {
+              "name": "assigned course instractor by super admin, admin and  department head",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"courseId\": \"094c8bc8-1382-4490-954c-85aebf0cc42a\",\r\n  \"instructorId\": \"bfe91ef8-7a6f-44fa-8f7e-5c936395c02b\",\r\n  \"isPrimary\": true\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:5000/api/v1/academic-catalog/course-instructors/create",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "5000",
+                  "path": [
+                    "api",
+                    "v1",
+                    "academic-catalog",
+                    "course-instructors",
+                    "create"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Zod Check",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"name\": \"Patient1\",\n    \"age\" : 12,\n    \"email\": \"mentor.saminravi@gmail.com\",\n    \"password\": \"12345678\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/zod",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "zod"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "supabase_service_role_api_key_18pn"
+    }
+  ]
+}

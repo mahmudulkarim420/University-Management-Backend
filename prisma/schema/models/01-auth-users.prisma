@@ -1,0 +1,106 @@
+// ============================================================================
+// UNIT 1 — AUTH / USERS
+// ============================================================================
+// The single authentication + identity table for every person in the system,
+// across all six roles. Role-specific data intentionally does NOT live here
+// — see 02-profiles.prisma. Keeping User small and role-agnostic means it
+// never needs to change shape when a new role-specific field is needed.
+// ============================================================================
+
+model User {
+  id                 String       @id @default(uuid())
+  /// Full display name.
+  name               String
+  /// Login identity. Unique across the whole system regardless of role.
+  email              String
+  /// Null when the account was created via Google OAuth (authProvider = GOOGLE).
+  password           String?
+  /// Nullable organizational scope — see "Why nullable" note below.
+  facultyId          String?
+  departmentId       String?
+  /// Google account identifier, set only for OAuth sign-ups.
+  googleId           String?      @unique
+  /// How this user authenticates. Drives whether `password` is expected.
+  authProvider       AuthProvider @default(CREDENTIAL)
+  emailVerified      Boolean      @default(false)
+  /// Exactly one business role per user — never model multi-role users
+  /// with a join table. If responsibilities change, update this value
+  /// through an authorized role-change workflow instead.
+  role               Role         @default(STUDENT)
+  /// Fine-grained resource:action grants layered on top of `role`.
+  /// SUPER_ADMIN governs this array for ADMIN users; every other role
+  /// receives an application-defined default set at creation time.
+  /// See docs/DATABASE_SCHEMA_README.md §11 (RBAC).
+  permissions        Permission[]
+  isActive           Boolean      @default(true)
+  /// Forces a password reset on next login (e.g. after an admin-issued
+  /// temporary password).
+  needPasswordChange Boolean      @default(false)
+  /// Soft-delete pair — see README §10. Historical relationships (grades,
+  /// payments, audit trail) must survive a user being "removed".
+  isDeleted          Boolean      @default(false)
+  deletedAt          DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  // --------------------------------------------------------------------
+  // Organizational scope
+  // --------------------------------------------------------------------
+  // Why nullable: SUPER_ADMIN, ADMIN, and ACCOUNTANT may be university-wide
+  // (no single faculty/department), while DEPARTMENT_HEAD and INSTRUCTOR
+  // normally belong to exactly one department. The service layer enforces
+  // which roles require a non-null value.
+  faculty    Faculty?    @relation("UserFaculty", fields: [facultyId], references: [id], onDelete: SetNull)
+  department Department? @relation("UserDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+
+  // --------------------------------------------------------------------
+  // One-to-one role profiles
+  // --------------------------------------------------------------------
+  // Exactly one of these should be populated, matching `role` — enforced
+  // at the service layer (Prisma cannot express "exactly one of five
+  // relations is non-null" declaratively). See 02-profiles.prisma.
+  superAdminProfile    SuperAdminProfile?
+  adminProfile          AdminProfile?
+  departmentHeadProfile DepartmentHeadProfile?
+  instructorProfile     InstructorProfile?
+  studentProfile        StudentProfile?
+  accountantProfile     AccountantProfile?
+
+  // --------------------------------------------------------------------
+  // Organizational headships this user holds
+  // --------------------------------------------------------------------
+  deanOfFaculties   Faculty[]    @relation("FacultyDean")
+  headOfDepartments Department[] @relation("DepartmentHead")
+
+  // --------------------------------------------------------------------
+  // Instructor course assignments
+  // --------------------------------------------------------------------
+  courseAssignments CourseInstructor[]
+  classSchedules    ClassSchedule[]    @relation("InstructorClassSchedules")
+
+  // --------------------------------------------------------------------
+  // "Actor" relations — actions this user performed elsewhere in the
+  // system. Grouped here once rather than duplicated per model, since
+  // they all point back to the same User table.
+  // --------------------------------------------------------------------
+  approvedEnrollments   StudentEnrollment[]     @relation("EnrollmentApprovedBy")
+  markedAttendance      Attendance[]            @relation("AttendanceMarkedBy")
+  createdAssignments    Assignment[]            @relation("AssignmentCreatedBy")
+  createdExams          Exam[]                  @relation("ExamCreatedBy")
+  submittedResults      Result[]                @relation("ResultSubmittedBy")
+  approvedResults       Result[]                @relation("ResultApprovedBy")
+  verifiedPayments      Payment[]               @relation("PaymentVerifiedBy")
+  approvedScholarships  Scholarship[]           @relation("ScholarshipApprovedBy")
+  createdTransactions   FinancialTransaction[]  @relation("TransactionCreatedBy")
+  createdNotices        Notice[]                @relation("NoticeCreatedBy")
+  createdEvents         Event[]                 @relation("EventCreatedBy")
+  updatedSystemSettings SystemSetting[]         @relation("SystemSettingUpdatedBy")
+  auditLogEntries       AuditLog[]              @relation("AuditLogActor")
+
+  @@unique([email])
+  @@index([facultyId])
+  @@index([departmentId])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}

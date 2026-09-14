@@ -1,0 +1,358 @@
+// ============================================================================
+// University Management — enums.prisma
+// Every enum used across all nine schema units, in one place. Enums are
+// shared vocabulary (e.g. Role, Permission) referenced from many different
+// units, so — unlike models — they are NOT split per unit; splitting them
+// would just force readers to jump between files to see one Role value used
+// in three different units. Each section below is labelled with which
+// unit(s) consume it.
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// Used by Unit 1 (Users) and Unit 2 (Profiles)
+// ---------------------------------------------------------------------------
+
+enum AuthProvider {
+  CREDENTIAL
+  GOOGLE
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  DEPARTMENT_HEAD
+  INSTRUCTOR
+  STUDENT
+  ACCOUNTANT
+}
+
+/// Fine-grained resource:action permissions layered on top of `Role`.
+/// A user's `role` decides the broad business capability; `permissions`
+/// decides exactly which resource-level actions that specific user may
+/// perform. SUPER_ADMIN governs this array for ADMIN users; every other
+/// role receives an application-defined default set at creation time.
+/// See docs/DATABASE_SCHEMA_README.md, Unit 1 → "RBAC model".
+enum Permission {
+  // Users
+  USER_READ
+  USER_CREATE
+  USER_UPDATE
+  USER_SUSPEND
+  USER_RESTORE
+
+  // Students
+  STUDENT_READ
+  STUDENT_CREATE
+  STUDENT_UPDATE
+
+  // Instructors
+  INSTRUCTOR_READ
+  INSTRUCTOR_CREATE
+  INSTRUCTOR_UPDATE
+
+  // Organization (Unit 3)
+  DEPARTMENT_READ
+  DEPARTMENT_CREATE
+  DEPARTMENT_UPDATE
+  FACULTY_READ
+  FACULTY_CREATE
+  FACULTY_UPDATE
+  PROGRAM_READ
+  PROGRAM_CREATE
+  PROGRAM_UPDATE
+
+  // Academic catalog (Unit 4)
+  SUBJECT_READ
+  SUBJECT_CREATE
+  SUBJECT_UPDATE
+  COURSE_READ
+  COURSE_CREATE
+  COURSE_UPDATE
+  COURSE_DELETE
+  COURSE_ASSIGN_INSTRUCTOR
+
+  // Academic delivery (Unit 5)
+  ACADEMIC_SESSION_READ
+  ACADEMIC_SESSION_MANAGE
+  SEMESTER_READ
+  SEMESTER_MANAGE
+  CLASS_SCHEDULE_READ
+  CLASS_SCHEDULE_MANAGE
+
+  // Student academics (Unit 6)
+  ENROLLMENT_READ
+  ENROLLMENT_CREATE
+  ENROLLMENT_APPROVE
+  ENROLLMENT_REJECT
+  ATTENDANCE_READ
+  ATTENDANCE_CREATE
+  ATTENDANCE_UPDATE
+  ASSIGNMENT_READ
+  ASSIGNMENT_CREATE
+  ASSIGNMENT_UPDATE
+  ASSIGNMENT_SUBMIT
+  ASSIGNMENT_GRADE
+  EXAM_READ
+  EXAM_CREATE
+  EXAM_UPDATE
+  RESULT_READ
+  RESULT_CREATE
+  RESULT_UPDATE
+  RESULT_SUBMIT
+  RESULT_APPROVE
+  RESULT_REJECT
+  RESULT_PUBLISH
+
+  // Communication (Unit 8)
+  NOTICE_READ
+  NOTICE_CREATE
+  NOTICE_UPDATE
+  NOTICE_PUBLISH
+  EVENT_READ
+  EVENT_CREATE
+  EVENT_UPDATE
+  EVENT_PUBLISH
+
+  // Finance (Unit 7)
+  PAYMENT_READ
+  PAYMENT_CREATE
+  PAYMENT_VERIFY
+  PAYMENT_RECONCILE
+  INVOICE_READ
+  INVOICE_CREATE
+  INVOICE_UPDATE
+  SCHOLARSHIP_READ
+  SCHOLARSHIP_CREATE
+  SCHOLARSHIP_UPDATE
+  SCHOLARSHIP_APPROVE
+  FINANCIAL_REPORT_READ
+  FINANCIAL_REPORT_GENERATE
+  FINANCIAL_REPORT_EXPORT
+
+  // System (Unit 9) / RBAC governance
+  SYSTEM_SETTING_READ
+  SYSTEM_SETTING_MANAGE
+  AUDIT_LOG_READ
+  ADMIN_PERMISSION_READ
+  ADMIN_PERMISSION_UPDATE
+}
+
+// ---------------------------------------------------------------------------
+// Used by Unit 2 (Profiles)
+// ---------------------------------------------------------------------------
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum StudentAcademicStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  GRADUATED
+  DROPPED_OUT
+  EXPELLED
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
+  TERMINATED
+  RETIRED
+}
+
+// ---------------------------------------------------------------------------
+// Used by Unit 4 (Academic Catalog)
+// ---------------------------------------------------------------------------
+
+enum DegreeType {
+  CERTIFICATE
+  DIPLOMA
+  BACHELOR
+  MASTER
+  PHD
+}
+
+enum SubjectType {
+  CORE
+  ELECTIVE
+  LAB
+  THESIS
+  INTERNSHIP
+}
+
+// ---------------------------------------------------------------------------
+// Used by Unit 5 (Academic Delivery)
+// ---------------------------------------------------------------------------
+
+enum SemesterTerm {
+  SPRING
+  SUMMER
+  FALL
+  WINTER
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// ---------------------------------------------------------------------------
+// Used by Unit 6 (Student Academics)
+// ---------------------------------------------------------------------------
+
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DROPPED
+  COMPLETED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  LATE
+  GRADED
+  RESUBMIT_REQUIRED
+}
+
+enum ExamType {
+  QUIZ
+  MIDTERM
+  FINAL
+  CLASS_TEST
+  PRACTICAL
+  VIVA
+  OTHER
+}
+
+enum ResultStatus {
+  DRAFT
+  SUBMITTED
+  REJECTED
+  APPROVED
+  PUBLISHED
+}
+
+// ---------------------------------------------------------------------------
+// Used by Unit 7 (Finance)
+// ---------------------------------------------------------------------------
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  MOBILE_BANKING
+  OTHER
+}
+
+enum PaymentGateway {
+  STRIPE
+  SSLCOMMERZ
+  BKASH
+  MANUAL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum ScholarshipStatus {
+  APPLIED
+  APPROVED
+  REJECTED
+  DISBURSED
+}
+
+enum FinancialTransactionType {
+  INVOICE_CHARGE
+  PAYMENT_RECEIVED
+  REFUND
+  ADJUSTMENT
+  SCHOLARSHIP_CREDIT
+}
+
+// ---------------------------------------------------------------------------
+// Used by Unit 8 (Communication)
+// ---------------------------------------------------------------------------
+
+enum NoticeScope {
+  UNIVERSITY
+  FACULTY
+  DEPARTMENT
+  SECTION
+}
+
+enum EventScope {
+  UNIVERSITY
+  FACULTY
+  DEPARTMENT
+}
+
+// ---------------------------------------------------------------------------
+// Used by Unit 9 (System)
+// ---------------------------------------------------------------------------
+
+enum AuditAction {
+  USER_CREATED
+  USER_UPDATED
+  ROLE_CHANGED
+  PERMISSION_CHANGED
+  USER_SUSPENDED
+  USER_RESTORED
+
+  GRADE_SUBMITTED
+  GRADE_APPROVED
+  GRADE_REJECTED
+  RESULT_PUBLISHED
+
+  PAYMENT_CREATED
+  PAYMENT_VERIFIED
+  PAYMENT_RECONCILED
+
+  INVOICE_CREATED
+  SCHOLARSHIP_APPROVED
+
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  PASSWORD_CHANGED
+  PASSWORD_RESET
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+}

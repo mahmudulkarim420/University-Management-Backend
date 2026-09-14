@@ -1,0 +1,91 @@
+// ============================================================================
+// UNIT 3 — ORGANIZATION
+// ============================================================================
+// The university's structural hierarchy: Faculty → Department → Program.
+// Every academic-catalog and delivery table (Units 4-5) ultimately traces
+// back to a Department, which is how department-scoped authorization
+// (DEPARTMENT_HEAD) is enforced.
+// ============================================================================
+
+/// Top-level academic organizational unit (e.g. "Faculty of Engineering").
+model Faculty {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  name        String
+  description String?
+  /// The user acting as dean. No dedicated DEAN role exists in this system
+  /// (per project decision) — deanship is just an assignment on top of an
+  /// existing user (typically an ADMIN).
+  deanUserId  String?
+  isActive    Boolean   @default(true)
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  dean        User?        @relation("FacultyDean", fields: [deanUserId], references: [id], onDelete: SetNull)
+  departments Department[]
+  users       User[]       @relation("UserFaculty")
+  notices     Notice[]
+  events      Event[]
+
+  @@index([deanUserId])
+  @@map("faculties")
+}
+
+/// A department within a Faculty (e.g. "Department of CSE"). Deleting a
+/// Faculty that still has departments is blocked (`onDelete: Restrict`)
+/// so academic history is never silently orphaned.
+model Department {
+  id          String    @id @default(uuid())
+  facultyId   String
+  code        String    @unique
+  name        String
+  description String?
+  /// The user acting as department head. Service layer must verify this
+  /// user's role = DEPARTMENT_HEAD and User.departmentId = this department.
+  headUserId  String?
+  isActive    Boolean   @default(true)
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  faculty Faculty @relation(fields: [facultyId], references: [id], onDelete: Restrict)
+  head    User?   @relation("DepartmentHead", fields: [headUserId], references: [id], onDelete: SetNull)
+
+  users    User[]    @relation("UserDepartment")
+  programs Program[]
+  courses  Course[]
+  notices  Notice[]
+  events   Event[]
+
+  @@index([facultyId])
+  @@index([headUserId])
+  @@map("departments")
+}
+
+/// An academic degree program (e.g. "BSc in CSE"), owned by a Department.
+model Program {
+  id            String    @id @default(uuid())
+  departmentId  String
+  code          String    @unique
+  name          String
+  degreeType    DegreeType
+  durationYears Int
+  totalCredits  Int
+  description   String?
+  isActive      Boolean   @default(true)
+  isDeleted     Boolean   @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  courses  Course[]
+  students StudentProfile[]
+
+  @@index([departmentId])
+  @@map("programs")
+}
